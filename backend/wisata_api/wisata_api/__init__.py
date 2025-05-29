@@ -43,9 +43,8 @@ def cors_preflight_view(request):
     if final_allowed_origin:
         response.headers['Access-Control-Allow-Origin'] = final_allowed_origin
 
-    response.headers['Access-Control-Allow-Methods'] = request.registry.settings.get(
-        'pyramid.cors.methods', 'GET,POST,PUT,DELETE,OPTIONS'
-    )
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+
     response.headers['Access-Control-Allow-Headers'] = request.registry.settings.get(
         'pyramid.cors.headers', 'Content-Type,Authorization,X-Requested-With'
     )
@@ -124,7 +123,7 @@ def main(global_config, **settings):
 
     # Include Cornice untuk REST API services
     config.include('cornice')
-
+    
     # Static views
     # Untuk file statis aplikasi (CSS, JS, dll)
     config.add_static_view(name='static', path='wisata_api:static')
@@ -134,6 +133,7 @@ def main(global_config, **settings):
 
     # Routes dasar dan scan views
     config.add_route('home', '/')
-    config.scan('.views')
 
+    config.scan('wisata_api.views')
+    
     return config.make_wsgi_app()

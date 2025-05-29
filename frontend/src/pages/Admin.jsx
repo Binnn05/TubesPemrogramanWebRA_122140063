@@ -84,6 +84,7 @@ function Admin() {
       return;
     }
 
+    // Untuk tempat baru (bukan mode edit), gambar wajib diisi
     if (!isEditing && !imageFile) {
       alert('Silakan pilih gambar untuk tempat baru.');
       return;
@@ -105,6 +106,8 @@ function Admin() {
     if (imageFile) {
       formData.append('imageFile', imageFile);
     }
+    // Jika sedang mengedit dan tidak ada file gambar baru,
+    // backend tidak akan mengubah gambar yang sudah ada. Tidak perlu mengirim field image lama.
 
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing ? `${API_URL}/${form.id}` : API_URL;
@@ -114,29 +117,44 @@ function Admin() {
         method: method,
         headers: {
           'Authorization': `Bearer ${adminToken}`,
+          // 'Content-Type': 'multipart/form-data' TIDAK PERLU di-set manual untuk FormData,
+          // browser akan menanganinya secara otomatis termasuk boundary.
         },
         body: formData,
       });
 
-      if (response.status === 200 || response.status === 201) {
-        const result = await response.json();
+      // Cek apakah respons OK (status 200-299)
+      if (response.ok) { // response.ok mencakup status 200, 201, dll.
+        const result = await response.json(); // Asumsikan sukses selalu mengembalikan JSON
         alert(isEditing ? 'Tempat berhasil diperbarui!' : `Tempat "${result.name}" berhasil ditambahkan!`);
-        fetchPlaces();
-        resetForm();
+        fetchPlaces(); // Muat ulang daftar tempat
+        resetForm();   // Reset form
       } else {
-        let errorDetail = `Gagal menyimpan data. Status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData && (errorData.detail || errorData.message)) {
-            errorDetail = errorData.detail || errorData.message;
+        // Jika respons tidak OK, baca body sebagai teks dulu (sekali saja)
+        let errorDetailMessage = `Gagal menyimpan data. Status: ${response.status} ${response.statusText}`;
+        const responseText = await response.text(); // Baca body sebagai teks
+
+        if (responseText) {
+          try {
+            // Coba parse teks tersebut sebagai JSON
+            const errorData = JSON.parse(responseText);
+            if (errorData && (errorData.detail || errorData.message)) {
+              errorDetailMessage = errorData.detail || errorData.message;
+            } else if (typeof errorData === 'string' && errorData.length > 0) {
+              errorDetailMessage = errorData; // Jika errorData adalah string non-kosong
+            } else if (responseText) { // Fallback ke responseText jika parsing JSON tidak menghasilkan pesan yang berguna
+              errorDetailMessage = responseText.substring(0, 200); // Batasi panjang untuk error HTML
+            }
+          } catch (e_parse) {
+            // Jika gagal parse sebagai JSON, gunakan teks respons (mungkin HTML error dari server)
+            console.warn("Response error body is not valid JSON:", responseText);
+            errorDetailMessage = responseText.substring(0, 200); // Batasi panjangnya
           }
-        } catch {
-          const textError = await response.text();
-          if (textError) errorDetail += ` - ${textError}`;
         }
-        throw new Error(errorDetail);
+        throw new Error(errorDetailMessage);
       }
     } catch (err) {
+      // err.message di sini akan berisi pesan error yang sudah diproses atau error jaringan
       setSubmitError(err.message);
       alert(`Terjadi Kesalahan: ${err.message}`);
       console.error('Submit error details:', err);
@@ -151,9 +169,9 @@ function Admin() {
         return;
       }
       
-      console.log('Deleting place with id:', id);
+      console.log('Deleting place with id:', id); // Tetap untuk debugging
       const deleteUrl = `${API_URL}/${id}`;
-      console.log('DELETE URL:', deleteUrl);
+      console.log('DELETE URL:', deleteUrl); // Tetap untuk debugging
 
       try {
         const response = await fetch(deleteUrl, {
@@ -163,30 +181,44 @@ function Admin() {
           },
         });
 
-        if (response.status === 200 || response.status === 204) {
+        if (response.status === 200) { // Jika backend mengembalikan data setelah berhasil (misal: pesan sukses)
+          const result = await response.json(); // Coba parse JSON jika ada body
+          alert(result.message || 'Tempat berhasil dihapus!');
+          fetchPlaces();
+          if (isEditing && form.id === id) {
+            resetForm();
+          }
+        } else if (response.status === 204) { // No Content, sukses tanpa body
           alert('Tempat berhasil dihapus!');
           fetchPlaces();
           if (isEditing && form.id === id) {
             resetForm();
           }
         } else if (response.status === 404) {
-          // Pesan khusus untuk 404
-          alert('Tempat tidak ditemukan atau sudah dihapus.');
+          // Pesan khusus untuk 404 Not Found
+          alert('Tempat tidak ditemukan di database atau mungkin sudah dihapus sebelumnya.');
+          fetchPlaces(); // Segarkan daftar untuk konsistensi
+          if (isEditing && form.id === id) {
+            resetForm(); // Reset form jika item yang diedit ternyata tidak ada
+          }
         } else {
+          // Untuk error lainnya
           let errorDetail = `Gagal menghapus tempat. Status: ${response.status}`;
           try {
+            // Coba baca detail error dari body respons
             const errorData = await response.json();
             if (errorData && (errorData.detail || errorData.message)) {
               errorDetail = errorData.detail || errorData.message;
             }
-          } catch {
-            // abaikan error parse json
+          } catch (e) {
+            // Jika body bukan JSON atau tidak ada detail, gunakan pesan status saja
+            console.warn("Respons error penghapusan bukan JSON atau tidak memiliki field 'detail'. Status:", response.status);
           }
           throw new Error(errorDetail);
         }
       } catch (err) {
         alert(`Error: ${err.message}`);
-        console.error('Delete error:', err);
+        console.error('Delete error details:', err); // Lebih detail untuk debugging
       }
     }
   };

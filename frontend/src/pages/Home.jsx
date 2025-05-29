@@ -52,9 +52,14 @@ function Home() {
   // Fungsi untuk mendapatkan URL gambar yang aman
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '/images/default-placeholder.jpg'; // Gambar default jika path kosong
-    if (imagePath.startsWith('http')) return imagePath; // URL absolut
-    if (imagePath.startsWith('/images/')) return imagePath; // Path sudah benar untuk public folder
-    return `/images/${imagePath.split('/').pop()}`; // Ambil nama file jika path relatif dari backend
+    if (imagePath.startsWith('http')) return imagePath; // URL absolut sudah benar
+    
+    // Jika imagePath adalah nama file atau path relatif dari backend,
+    // kita akan mengarahkannya ke endpoint /uploads/ di backend.
+    // Asumsi: backend menyajikan gambar dari http://localhost:6543/uploads/NAMA_FILE_GAMBAR
+    // dan imagePath yang diterima dari API adalah NAMA_FILE_GAMBAR (atau path yang bisa di-split).
+    const imageName = imagePath.split('/').pop(); // Ambil hanya nama file
+    return `http://localhost:6543/uploads/${imageName}`; 
   };
 
 
