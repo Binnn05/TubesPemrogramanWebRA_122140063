@@ -1,90 +1,224 @@
-// frontend/src/pages/Admin.jsx
-import { useEffect, useState } from 'react';
-import { dummyPlaces as initialDummyPlaces } from '../data/placesData'; //
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 function Admin() {
-  const [places, setPlaces] = useState([]); //
-  const [form, setForm] = useState({ 
-    id: '', 
-    name: '', 
+  const [places, setPlaces] = useState([]);
+  const initialFormState = {
+    id: '',
+    name: '',
     description: '',
-    category: '', 
-    location: '', 
-    image: '', 
-    mapsEmbed: '' 
-  });
-  const [isEditing, setIsEditing] = useState(false);
-
-  const fetchPlaces = () => { //
-    setPlaces([...initialDummyPlaces]); //
+    category: '',
+    location: '',
+    image: '',
+    mapsEmbed: ''
   };
+  const [form, setForm] = useState(initialFormState);
+  const [imageFile, setImageFile] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState('');
+  
+  const fileInputRef = useRef(null);
+
+  const API_URL = 'http://localhost:6543/api/places';
+
+  const fetchPlaces = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setPlaces(data);
+    } catch (err) {
+      setError(err.message);
+      setPlaces([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchPlaces();
-  }, []);
+  }, [fetchPlaces]);
 
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleImageChange = e => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCurrentImageUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImageFile(null);
+      setCurrentImageUrl(isEditing && form.image ? getDisplayImageUrl(form.image) : '');
+    }
+  };
+
+  const resetForm = () => {
+    setForm(initialFormState);
+    setImageFile(null);
+    setIsEditing(false);
+    setSubmitError(null);
+    setCurrentImageUrl('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null;
+    }
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.name || !form.description || !form.category || !form.location || !form.image) {
-      alert('Nama, Deskripsi, Kategori, Lokasi, dan URL Gambar harus diisi!');
+    setSubmitError(null);
+
+    if (!form.name || !form.category || !form.location) {
+      alert('Nama, Kategori, dan Lokasi harus diisi!');
       return;
     }
 
-    if (isEditing) {
-      const updatedPlaces = places.map(p => 
-        p.id === form.id ? { ...form } : p 
-      );
-      setPlaces(updatedPlaces); 
-      alert('Tempat berhasil diperbarui!');
-      setIsEditing(false); 
-    } else {
-      const newId = String(places.length > 0 ? Math.max(...places.map(p => Number(p.id))) + 1 : 1);
-      const newPlace = { 
-        ...form, 
-        id: newId
-      };
-      setPlaces([...places, newPlace]); 
-      alert('Tempat berhasil ditambahkan!');
+    if (!isEditing && !imageFile) {
+      alert('Silakan pilih gambar untuk tempat baru.');
+      return;
     }
-    
-    setForm({ 
-      id: '', name: '', description: '', category: '', location: '', image: '', mapsEmbed: '' 
-    });
+
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) {
+      alert('Sesi admin tidak ditemukan. Silakan login kembali.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('description', form.description || '');
+    formData.append('category', form.category);
+    formData.append('location', form.location);
+    formData.append('mapsEmbed', form.mapsEmbed || '');
+
+    if (imageFile) {
+      formData.append('imageFile', imageFile);
+    }
+
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing ? `${API_URL}/${form.id}` : API_URL;
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: formData,
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        const result = await response.json();
+        alert(isEditing ? 'Tempat berhasil diperbarui!' : `Tempat "${result.name}" berhasil ditambahkan!`);
+        fetchPlaces();
+        resetForm();
+      } else {
+        let errorDetail = `Gagal menyimpan data. Status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData && (errorData.detail || errorData.message)) {
+            errorDetail = errorData.detail || errorData.message;
+          }
+        } catch {
+          const textError = await response.text();
+          if (textError) errorDetail += ` - ${textError}`;
+        }
+        throw new Error(errorDetail);
+      }
+    } catch (err) {
+      setSubmitError(err.message);
+      alert(`Terjadi Kesalahan: ${err.message}`);
+      console.error('Submit error details:', err);
+    }
   };
 
   const handleDelete = async id => {
     if (window.confirm('Apakah Anda yakin ingin menghapus tempat ini?')) {
-      const updatedPlaces = places.filter(p => p.id !== id);
-      setPlaces(updatedPlaces);
-      alert('Tempat berhasil dihapus!');
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        alert('Sesi admin tidak ditemukan. Silakan login kembali.');
+        return;
+      }
+      
+      console.log('Deleting place with id:', id);
+      const deleteUrl = `${API_URL}/${id}`;
+      console.log('DELETE URL:', deleteUrl);
+
+      try {
+        const response = await fetch(deleteUrl, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`,
+          },
+        });
+
+        if (response.status === 200 || response.status === 204) {
+          alert('Tempat berhasil dihapus!');
+          fetchPlaces();
+          if (isEditing && form.id === id) {
+            resetForm();
+          }
+        } else if (response.status === 404) {
+          // Pesan khusus untuk 404
+          alert('Tempat tidak ditemukan atau sudah dihapus.');
+        } else {
+          let errorDetail = `Gagal menghapus tempat. Status: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            if (errorData && (errorData.detail || errorData.message)) {
+              errorDetail = errorData.detail || errorData.message;
+            }
+          } catch {
+            // abaikan error parse json
+          }
+          throw new Error(errorDetail);
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        console.error('Delete error:', err);
+      }
     }
   };
 
   const handleEdit = (place) => {
-    setForm({ ...place }); 
-    setIsEditing(true); 
+    setForm({ ...place, description: place.description || '', mapsEmbed: place.mapsEmbed || '' });
+    setIsEditing(true);
+    setImageFile(null);
+    setCurrentImageUrl(place.image ? getDisplayImageUrl(place.image) : '');
+    setSubmitError(null);
+    window.scrollTo(0, 0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null;
+    }
   };
 
-  const handleCancelEdit = () => {
-    setForm({ 
-      id: '', name: '', description: '', category: '', location: '', image: '', mapsEmbed: '' 
-    });
-    setIsEditing(false);
+  const getDisplayImageUrl = (imagePath) => {
+    if (!imagePath) return '/images/default-placeholder.jpg';
+    if (imagePath.startsWith('http')) return imagePath;
+    if (imagePath.startsWith('/images/')) return imagePath;
+    return `http://localhost:6543/uploads/${imagePath.split('/').pop()}`;
   };
 
   return (
-    // Tambahkan pt-20 di sini
-    <div className="max-w-4xl mx-auto p-4 pt-20"> 
+    <div className="max-w-4xl mx-auto p-4 pt-20">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Manajemen Tempat Wisata</h1>
 
       <div className="bg-white p-6 rounded-lg shadow-md mb-8">
         <h2 className="text-2xl font-semibold mb-4 text-sky-700">
           {isEditing ? 'Edit Tempat Wisata' : 'Tambah Tempat Wisata Baru'}
         </h2>
+        {submitError && <p className="text-red-500 bg-red-100 p-3 rounded mb-4">Error: {submitError}</p>}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <input
             name="name"
@@ -96,7 +230,7 @@ function Admin() {
           />
           <input
             name="category"
-            placeholder="Kategori (contoh: Wisata Pantai, Kuliner)"
+            placeholder="Kategori (contoh: Wisata Pantai)"
             value={form.category}
             onChange={handleChange}
             className="border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -110,80 +244,118 @@ function Admin() {
             className="border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
             required
           />
-          <input
-            name="image"
-            placeholder="URL Gambar (contoh: /images/nama-gambar.jpg)"
-            value={form.image}
-            onChange={handleChange}
-            className="border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
-            required
-          />
-          <input
-            name="mapsEmbed"
-            placeholder="URL Google Maps Embed (opsional)"
-            value={form.mapsEmbed}
-            onChange={handleChange}
-            className="border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
+
+          <div className="md:col-span-2">
+            <label htmlFor="imageFile" className="block text-sm font-medium text-gray-700 mb-1">
+              Gambar Tempat {isEditing && form.image && !imageFile ? '(Biarkan kosong jika tidak ingin diubah)' : (isEditing ? '' : '(Wajib diisi)')}
+            </label>
+            <input
+              ref={fileInputRef}
+              id="imageFile"
+              name="imageFile"
+              type="file"
+              accept="image/png, image/jpeg, image/jpg, image/webp"
+              onChange={handleImageChange}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-gray-300 rounded-lg cursor-pointer p-2.5"
+            />
+            {currentImageUrl && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-600">Preview / Gambar Saat Ini:</p>
+                <img src={currentImageUrl} alt="Preview" className="mt-1 max-h-40 rounded border" />
+              </div>
+            )}
+            {!currentImageUrl && isEditing && form.image && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">Gambar saat ini: {form.image ? form.image.split('/').pop() : 'Tidak ada'}</p>
+                <img
+                  src={getDisplayImageUrl(form.image)}
+                  alt="Current"
+                  className="mt-1 max-h-40 rounded border"
+                  onError={(e) => { e.currentTarget.src = '/images/default-placeholder.jpg'; }}
+                />
+              </div>
+            )}
+          </div>
+
           <textarea
             name="description"
-            placeholder="Deskripsi Lengkap Tempat"
+            placeholder="Deskripsi Tempat Wisata"
             value={form.description}
             onChange={handleChange}
-            className="border border-gray-300 p-3 rounded md:col-span-2 focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[100px]"
-            required
+            rows={4}
+            className="md:col-span-2 border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
-          
-          <div className="md:col-span-2 flex gap-4 mt-2">
-            <button
-              type="submit"
-              className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex-1"
-            >
-              {isEditing ? 'Simpan Perubahan' : 'Tambah Tempat'}
-            </button>
+          <textarea
+            name="mapsEmbed"
+            placeholder="Embed Code Google Maps (opsional)"
+            value={form.mapsEmbed}
+            onChange={handleChange}
+            rows={3}
+            className="md:col-span-2 border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+
+          <div className="md:col-span-2 flex gap-4 justify-end">
             {isEditing && (
               <button
-                type="button" 
-                onClick={handleCancelEdit}
-                className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg transition duration-300"
+                type="button"
+                onClick={resetForm}
+                className="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded"
               >
-                Batal Edit
+                Batal
               </button>
             )}
+            <button
+              type="submit"
+              className="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-2 px-6 rounded"
+            >
+              {isEditing ? 'Update' : 'Tambah'}
+            </button>
           </div>
         </form>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Daftar Tempat Wisata</h2>
-        <ul className="divide-y divide-gray-200">
-          {places.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">Belum ada tempat wisata. Silakan tambahkan!</p>
-          ) : (
-            places.map(p => (
-              <li key={p.id} className="py-4 flex flex-col md:flex-row justify-between items-start md:items-center">
-                <div className="flex-1 mb-2 md:mb-0">
-                  <span className="font-semibold text-lg text-gray-900">{p.name}</span>
-                  <p className="text-sm text-gray-600 line-clamp-1">{p.description}</p>
-                  <p className="text-xs text-gray-500">{p.category} | {p.location}</p>
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-sky-700">Daftar Tempat Wisata</h2>
+        {loading && <p>Loading tempat wisata...</p>}
+        {error && <p className="text-red-600">Error saat mengambil data: {error}</p>}
+        {!loading && !error && places.length === 0 && <p>Belum ada data tempat wisata.</p>}
+
+        <ul className="space-y-4">
+          {places.map((place) => (
+            <li
+              key={place.id}
+              className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-white rounded shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <img
+                  src={getDisplayImageUrl(place.image)}
+                  alt={place.name}
+                  className="w-24 h-16 object-cover rounded"
+                  onError={(e) => { e.currentTarget.src = '/images/default-placeholder.jpg'; }}
+                />
+                <div>
+                  <h3 className="font-semibold text-lg">{place.name}</h3>
+                  <p className="text-sm text-gray-600">{place.category}</p>
+                  <p className="text-sm text-gray-600">{place.location}</p>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(p)}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm transition duration-300"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition duration-300"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </li>
-            ))
-          )}
+              </div>
+
+              <div className="flex gap-2 mt-2 md:mt-0">
+                <button
+                  onClick={() => handleEdit(place)}
+                  className="bg-yellow-400 hover:bg-yellow-500 text-white py-1 px-3 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(place.id)}
+                  className="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded"
+                >
+                  Hapus
+                </button>
+              </div>
+            </li>
+          ))}
         </ul>
       </div>
     </div>

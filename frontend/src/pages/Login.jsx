@@ -1,12 +1,12 @@
 // frontend/src/pages/Login.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx'; //
+import { useAuth } from '../context/AuthContext.jsx';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth(); //
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
@@ -19,7 +19,6 @@ function Login() {
   };
 
   return (
-    // Tambahkan pt-20 di sini
     <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 border shadow pt-20"> 
       <h2 className="text-xl font-bold mb-4">Login Admin</h2>
       <input

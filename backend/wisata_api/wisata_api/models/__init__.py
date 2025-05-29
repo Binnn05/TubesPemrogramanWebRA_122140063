@@ -1,20 +1,29 @@
 # C:\PEMWEB\tubes\backend\wisata_api\wisata_api\models\__init__.py
-from sqlalchemy import Column, Integer, Text, String
+
+from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from zope.sqlalchemy import register # BARIS INI BERUBAH: HANYA IMPORT 'register'
+from zope.sqlalchemy import register
 from passlib.context import CryptContext
 import transaction
+import logging
 
-DBSession = scoped_session(sessionmaker()) # BARIS INI BERUBAH: Hapus 'extension=...'
-register(DBSession) # BARIS BARU: Daftarkan DBSession
+log = logging.getLogger(__name__)
 
+# Setup untuk session DB
+DBSession = scoped_session(sessionmaker())
+register(DBSession)
+
+# Base untuk semua model
 Base = declarative_base()
 
+# Setup hashing password
 pwd_context = CryptContext(schemes=["pbkdf2_sha512"], deprecated="auto")
+
 
 class User(Base):
     __tablename__ = 'users'
+
     id = Column(Integer, primary_key=True)
     username = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
@@ -31,8 +40,10 @@ class User(Base):
             'username': self.username,
         }
 
+
 class Place(Base):
     __tablename__ = 'places'
+
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
@@ -52,18 +63,31 @@ class Place(Base):
             'mapsEmbed': self.mapsEmbed,
         }
 
+
 def initialize_sql(engine):
+    """
+    Inisialisasi database: bind engine ke DBSession, buat tabel,
+    dan pastikan admin user ada.
+    """
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
     Base.metadata.create_all(engine)
-    
+
     session = DBSession()
-    if session.query(User).filter_by(username='admin').first() is None:
-        admin_user = User(username='admin')
-        admin_user.set_password('admin')
-        session.add(admin_user)
-        transaction.commit()
-        print("Admin user 'admin' created with password 'admin'")
-    else:
-        print("Admin user 'admin' already exists.")
-    session.close()
+    try:
+        admin = session.query(User).filter_by(username='admin').first()
+        if admin is None:
+            admin_user = User(username='admin')
+            admin_user.set_password('admin')  # default password admin
+            session.add(admin_user)
+            with transaction.manager:
+                # Commit otomatis
+                pass
+            print("Admin user 'admin' created with password 'admin'")
+        else:
+            print("Admin user 'admin' already exists.")
+    except Exception as e:
+        log.error(f"Error during DB initialization: {e}", exc_info=True)
+        transaction.abort()
+    finally:
+        session.close()

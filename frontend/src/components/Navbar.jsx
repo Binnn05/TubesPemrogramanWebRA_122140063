@@ -1,13 +1,13 @@
 // frontend/src/components/Navbar.jsx
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx'; //
-import { useState, useEffect } from 'react'; //
+import { useAuth } from '../context/AuthContext.jsx';
+import { useState, useEffect } from 'react';
 
 function Navbar() {
-  const { user, logout } = useAuth(); //
-  const [scrolled, setScrolled] = useState(false); //
+  const { user, logout } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => { //
+  useEffect(() => {
     const handleScroll = () => {
       const isScrolled = window.scrollY > 10;
       if (isScrolled !== scrolled) {
@@ -25,19 +25,16 @@ function Navbar() {
   return (
     <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-sky-500 shadow-lg py-3' : 'bg-sky-400 py-4'}`}>
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-        {/* Logo atau Nama Website */}
         <Link to="/" className="text-white text-2xl font-extrabold tracking-wide">
           Sungailiat Wisata
         </Link>
 
-        {/* Navigasi Utama */}
         <div className="flex gap-8 items-center text-white text-lg">
           <Link to="/" className="hover:underline">Beranda</Link>
-          <Link to="/gallery" className="hover:underline">Galeri</Link>
           <Link to="/about" className="hover:underline">Tentang Kami</Link>
+          <Link to="/gallery" className="hover:underline">Galeri</Link>
         </div>
 
-        {/* Autentikasi */}
         <div className="flex gap-4 items-center text-white text-lg">
           {user ? (
             <>

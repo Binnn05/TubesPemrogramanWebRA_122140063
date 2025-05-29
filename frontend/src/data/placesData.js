@@ -1,7 +1,4 @@
-// frontend/src/data/placesData.js
-
-// Data dummy yang akan digunakan di Home.jsx, PlaceDetail.jsx, dan Admin.jsx
-export const dummyPlaces = [ // PASTIKAN ADA 'export' DI SINI
+export const dummyPlaces = [
   {
     id: "1",
     name: "Pantai Tikus Emas",
