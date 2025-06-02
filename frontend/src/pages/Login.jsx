@@ -1,4 +1,3 @@
-// frontend/src/pages/Login.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -19,7 +18,7 @@ function Login() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 border shadow pt-20"> 
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-4 border shadow pt-20">
       <h2 className="text-xl font-bold mb-4">Login Admin</h2>
       <input
         type="text"

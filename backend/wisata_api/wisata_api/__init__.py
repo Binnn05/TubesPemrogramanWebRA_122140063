@@ -1,4 +1,3 @@
-# C:\PEMWEB\tubes\backend\wisata_api\wisata_api\__init__.py
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from .models import initialize_sql
@@ -107,33 +106,22 @@ def main(global_config, **settings):
     """
     Fungsi utama untuk menginisialisasi aplikasi Pyramid
     """
-    # Setup engine database dan inisialisasi model
     engine = engine_from_config(settings, 'sqlalchemy.')
     initialize_sql(engine)
 
     config = Configurator(settings=settings)
-
-    # Include jinja2 templating engine
     config.include('pyramid_jinja2')
 
-    # Konfigurasi CORS
     config.add_directive('add_cors_preflight_handler', add_cors_preflight_handler)
     config.add_cors_preflight_handler()
     config.add_subscriber(add_cors_headers_response_callback, 'pyramid.events.NewResponse')
 
-    # Include Cornice untuk REST API services
     config.include('cornice')
     
-    # Static views
-    # Untuk file statis aplikasi (CSS, JS, dll)
     config.add_static_view(name='static', path='wisata_api:static')
-
-    # Untuk file upload user, misal gambar
     config.add_static_view(name='uploads', path='wisata_api:static/uploads')
 
-    # Routes dasar dan scan views
     config.add_route('home', '/')
-
     config.scan('wisata_api.views')
     
     return config.make_wsgi_app()

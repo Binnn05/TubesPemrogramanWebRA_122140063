@@ -1,9 +1,7 @@
-// frontend/src/pages/Home.jsx
 import { useEffect, useState } from "react";
 import { Carousel } from "react-responsive-carousel";
 import { Link } from "react-router-dom";
 import "react-responsive-carousel/lib/styles/carousel.min.css";
-// HAPUS: import { dummyPlaces as initialDummyPlaces } from "../data/placesData";
 
 function Home() {
   const [places, setPlaces] = useState([]);
@@ -18,19 +16,17 @@ function Home() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://localhost:6543/api/places'); // URL API Backend
+        const response = await fetch('http://localhost:6543/api/places');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         setPlaces(data);
-        // Ambil beberapa data pertama untuk carousel, misalnya 5.
-        // Pastikan data memiliki ID unik dan properti yang dibutuhkan carousel.
         setCarouselPlaces(data.slice(0, Math.min(data.length, 5)));
       } catch (err) {
         setError(err.message);
         console.error('Error fetching places:', err);
-        setPlaces([]); // Kosongkan jika error
+        setPlaces([]);
         setCarouselPlaces([]);
       } finally {
         setLoading(false);
@@ -49,26 +45,20 @@ function Home() {
     return matchesSearch && matchesFilter;
   });
 
-  // Fungsi untuk mendapatkan URL gambar yang aman
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return '/images/default-placeholder.jpg'; // Gambar default jika path kosong
-    if (imagePath.startsWith('http')) return imagePath; // URL absolut sudah benar
-    
-    // Jika imagePath adalah nama file atau path relatif dari backend,
-    // kita akan mengarahkannya ke endpoint /uploads/ di backend.
-    // Asumsi: backend menyajikan gambar dari http://localhost:6543/uploads/NAMA_FILE_GAMBAR
-    // dan imagePath yang diterima dari API adalah NAMA_FILE_GAMBAR (atau path yang bisa di-split).
-    const imageName = imagePath.split('/').pop(); // Ambil hanya nama file
-    return `http://localhost:6543/uploads/${imageName}`; 
+    if (!imagePath) return '/images/default-placeholder.jpg';
+    if (imagePath.startsWith('http')) return imagePath;
+
+    const imageName = imagePath.split('/').pop();
+    return `http://localhost:6543/uploads/${imageName}`;
   };
 
 
   return (
     <div className="min-h-screen">
-      {/* Bagian Header Utama dengan Gambar Latar Belakang Penuh */}
       <div
         className="relative w-full h-[500px] bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center text-white p-4"
-        style={{ backgroundImage: `url('/images/pantai-tikus.jpg')` }} // Pastikan gambar ini ada di public/images
+        style={{ backgroundImage: `url('/images/pantai-tikus.jpg')` }}
       >
         <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="relative z-10 text-center max-w-3xl mx-auto">
@@ -81,11 +71,8 @@ function Home() {
         </div>
       </div>
 
-      {/* Konten Utama Halaman Home (setelah header), dengan padding top untuk navbar */}
-      <div className="pt-16"> {/* Padding top untuk navbar fixed */}
-        {/* Bagian Carousel dengan Deskripsi Mengapit di Samping */}
+      <div className="pt-16">
         <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
-          {/* Kolom Kiri: Deskripsi Ringkas Kota Sungailiat */}
           <div className="lg:col-span-1 bg-sky-50 p-6 rounded-lg shadow-md self-start text-center lg:text-left">
             <h2 className="text-xl font-bold mb-3 text-sky-800">Tentang Sungailiat</h2>
             <p className="text-sm text-gray-700 leading-relaxed">
@@ -97,7 +84,6 @@ function Home() {
              <Link to="/about" className="mt-4 inline-block text-blue-600 hover:underline text-sm font-semibold">Baca Selengkapnya →</Link>
           </div>
 
-          {/* Kolom Tengah (Carousel) */}
           <div className="lg:col-span-1 w-full flex justify-center">
             {loading && <p className="text-center">Memuat carousel...</p>}
             {error && <p className="text-center text-red-500">Gagal memuat data carousel.</p>}
@@ -112,10 +98,10 @@ function Home() {
               >
                 {carouselPlaces.map(place => (
                   <div key={place.id}>
-                    <img 
+                    <img
                       src={getImageUrl(place.image)}
-                      alt={place.name || 'Gambar tempat'} 
-                      className="h-80 w-full object-cover" // Sesuaikan tinggi carousel
+                      alt={place.name || 'Gambar tempat'}
+                      className="h-80 w-full object-cover"
                     />
                     <p className="legend">{place.name}</p>
                   </div>
@@ -129,7 +115,6 @@ function Home() {
             )}
           </div>
 
-          {/* Kolom Kanan: Deskripsi Lanjutan Kota Sungailiat */}
           <div className="lg:col-span-1 bg-sky-50 p-6 rounded-lg shadow-md self-start text-center lg:text-left">
             <h2 className="text-xl font-bold mb-3 text-sky-800">Pesona Alam & Kuliner</h2>
             <p className="text-sm text-gray-700 leading-relaxed">
@@ -140,7 +125,7 @@ function Home() {
             </p>
              <Link to="/about" className="mt-4 inline-block text-blue-600 hover:underline text-sm font-semibold">Baca Selengkapnya →</Link>
           </div>
-        </div> {/* Akhir Bagian Carousel dengan Deskripsi Mengapit */}
+        </div>
 
         <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6 w-full max-w-4xl mx-auto">
@@ -157,20 +142,17 @@ function Home() {
                 className="border border-gray-300 p-2 rounded w-full md:max-w-xs"
               >
                 <option value="all">Semua Kategori</option>
-                {/* Anda bisa membuat daftar kategori dinamis dari data `places` jika perlu */}
-                <option value="pantai">Wisata Pantai</option>
+                <option value="wisata">Wisata</option>
                 <option value="kuliner">Kuliner</option>
                 <option value="ibadah">Tempat Ibadah</option>
                 <option value="penginapan">Penginapan</option>
                 <option value="resto">Resto</option>
-                {/* Tambahkan kategori lain yang relevan */}
               </select>
             </div>
 
-            {/* Daftar Tempat */}
             {loading && <p className="text-center col-span-full text-lg mt-8">Memuat tempat wisata...</p>}
             {error && <p className="text-center col-span-full text-red-600 text-lg mt-8">Gagal memuat data tempat: {error}</p>}
-            
+
             {!loading && !error && (
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 w-full max-w-4xl mx-auto">
                 {filtered.length > 0 ? filtered.map((place) => (

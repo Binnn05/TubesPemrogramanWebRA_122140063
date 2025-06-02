@@ -1,7 +1,6 @@
-# C:\PEMWEB\tubes\backend\wisata_api\wisata_api\views\api.py
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound, HTTPBadRequest, HTTPForbidden, HTTPInternalServerError
-from sqlalchemy.exc import DBAPIError, InvalidRequestError # Pastikan InvalidRequestError diimport
+from sqlalchemy.exc import DBAPIError, InvalidRequestError
 import transaction
 from cornice import Service
 from ..models import DBSession, Place, User, pwd_context
@@ -9,12 +8,8 @@ from ..models import DBSession, Place, User, pwd_context
 import os
 import shutil
 import uuid
-import traceback 
-import cgi 
-
-# Asumsikan PACKAGE_ROOT, UPLOAD_DIR, ALLOWED_EXTENSIONS, validate_admin_auth, 
-# login_service, get_places, get_place, dan _save_image sudah ada dan benar dari kode sebelumnya.
-# Jika belum, Anda bisa menyalinnya dari respons saya sebelumnya.
+import traceback
+import cgi
 
 PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(PACKAGE_ROOT, 'static', 'uploads')
@@ -41,7 +36,7 @@ def login_user(request):
         data = request.json_body
         username = data.get('username')
         password = data.get('password')
-    except Exception: # Lebih umum untuk menangkap error parsing JSON
+    except Exception:
         print("ERROR: login_user - Invalid JSON payload", flush=True)
         raise HTTPBadRequest(detail="Format JSON payload tidak valid.")
 
@@ -72,25 +67,23 @@ def get_places(request):
     except Exception as e:
         print(f"ERROR di get_places: {e}", flush=True)
         traceback.print_exc()
-        # Gunakan HTTPInternalServerError agar konsisten dengan yang diimport
         raise HTTPInternalServerError(detail="Terjadi kesalahan saat mengambil daftar tempat.")
 
 
-@place_detail_service.get() # Gunakan service yang sesuai
+@place_detail_service.get()
 def get_place(request):
     print("--- GET_PLACE (BY ID) FUNCTION CALLED ---", flush=True)
-    place_id_str = request.matchdict.get('id') # ID diambil dari matchdict
+    place_id_str = request.matchdict.get('id')
     print(f"--- Path: {request.path}, Method: {request.method}, Matchdict ID: '{place_id_str}' ---", flush=True)
     try:
         place_id = int(place_id_str)
-    except (ValueError, TypeError): # Tangkap TypeError jika place_id_str adalah None
+    except (ValueError, TypeError):
         print(f"ERROR: get_place - Invalid ID '{place_id_str}'", flush=True)
         raise HTTPBadRequest(detail=f"ID tempat tidak valid: '{place_id_str}' bukan angka atau tidak ada.")
 
     place = DBSession.query(Place).filter_by(id=place_id).first()
     if place is None:
         print(f"ERROR: get_place - Tempat ID {place_id} tidak ditemukan", flush=True)
-        # Detail message di sini akan dikirim ke frontend jika tidak ada exception view khusus 404
         raise HTTPNotFound(detail=f"Tempat dengan ID {place_id} tidak ditemukan atau sudah dihapus sebelumnya.")
 
     print(f"INFO: get_place - Ditemukan tempat: {place.name}", flush=True)
@@ -116,9 +109,9 @@ def _save_image(image_file_storage):
     image_save_path = os.path.join(UPLOAD_DIR, unique_filename)
 
     try:
-        if not hasattr(image_file_storage.file, 'read'): # Seharusnya ini objek file
+        if not hasattr(image_file_storage.file, 'read'):
             raise HTTPBadRequest(detail="Objek file gambar tidak valid atau rusak.")
-        image_file_storage.file.seek(0) # Pastikan membaca dari awal file
+        image_file_storage.file.seek(0)
         with open(image_save_path, 'wb') as output_file:
             shutil.copyfileobj(image_file_storage.file, output_file)
         print(f"INFO: _save_image - File berhasil disimpan sebagai: {unique_filename}", flush=True)
@@ -150,10 +143,6 @@ def create_place(request):
         image_filename = None
         if image_file_storage is not None and hasattr(image_file_storage, 'filename') and image_file_storage.filename:
             image_filename = _save_image(image_file_storage)
-        
-        # Uncomment baris di bawah jika gambar wajib untuk tempat baru
-        # if image_filename is None: 
-        #     raise HTTPBadRequest(detail="Gambar tempat wajib diisi untuk tempat baru.")
 
         new_place = Place(
             name=name,
@@ -165,30 +154,27 @@ def create_place(request):
         )
 
         DBSession.add(new_place)
-        # ---- PERUBAHAN UTAMA ----
-        DBSession.flush()  # Kirim perubahan ke DB & isi atribut seperti ID ke objek new_place
-        response_data = new_place.to_dict() # Panggil to_dict() SEKARANG, saat new_place masih terikat sesi
-        # ---- AKHIR PERUBAHAN UTAMA ----
+        DBSession.flush()
+        response_data = new_place.to_dict()
         
-        # Simpan ID untuk logging sebelum commit atau setelah flush
         place_id_for_log = new_place.id if hasattr(new_place, 'id') else 'N/A (belum ada ID setelah flush?)'
 
-        transaction.commit() # Commit transaksi ke database
+        transaction.commit()
 
-        print(f"INFO: Tempat '{name}' berhasil dibuat dengan ID {place_id_for_log}", flush=True) 
+        print(f"INFO: Tempat '{name}' berhasil dibuat dengan ID {place_id_for_log}", flush=True)
         
-        request.response.status_int = 201 
-        return response_data # Kembalikan data yang sudah disiapkan
+        request.response.status_int = 201
+        return response_data
 
-    except HTTPBadRequest as e: 
-        if transaction.isDoomed(): transaction.abort() 
-        raise e 
+    except HTTPBadRequest as e:
+        if transaction.isDoomed(): transaction.abort()
+        raise e
     except Exception as e:
         if transaction.isDoomed(): transaction.abort()
         print(f"ERROR di create_place: {e}", flush=True)
         traceback.print_exc()
         detail_error = getattr(e, 'detail', "Terjadi kesalahan internal server saat membuat tempat.")
-        if isinstance(e, (HTTPInternalServerError, HTTPForbidden, HTTPNotFound, HTTPBadRequest)): # Periksa jika e sudah merupakan HTTP Exception
+        if isinstance(e, (HTTPInternalServerError, HTTPForbidden, HTTPNotFound, HTTPBadRequest)):
             raise e
         raise HTTPInternalServerError(detail=detail_error)
 
@@ -234,8 +220,6 @@ def update_place(request):
             place.image = new_image_filename
 
         DBSession.flush()
-
-        # Ambil data sebelum commit
         response_data = place.to_dict()
 
         try:
@@ -253,13 +237,13 @@ def update_place(request):
     
 
 
-@place_detail_service.delete() # Gunakan service yang sesuai
+@place_detail_service.delete()
 def delete_place(request):
     print("--- DELETE_PLACE FUNCTION CALLED ---", flush=True)
     if not validate_admin_auth(request):
         raise HTTPForbidden(detail="Autentikasi diperlukan untuk operasi ini.")
 
-    place_id_str = request.matchdict.get('id') 
+    place_id_str = request.matchdict.get('id')
     try:
         place_id = int(place_id_str)
     except (ValueError, TypeError):
@@ -272,12 +256,11 @@ def delete_place(request):
 
     try:
         image_path_to_delete = os.path.join(UPLOAD_DIR, place.image) if place.image else None
-        deleted_place_name = place.name 
+        deleted_place_name = place.name
         DBSession.delete(place)
         
-        transaction.commit() # Commit penghapusan dari DB
+        transaction.commit()
         
-        # Setelah DB ter-commit, baru coba hapus file. 
         if image_path_to_delete and os.path.exists(image_path_to_delete):
             try:
                 os.remove(image_path_to_delete)
@@ -286,22 +269,22 @@ def delete_place(request):
                 print(f"WARNING: Gagal menghapus file gambar {image_path_to_delete} setelah menghapus dari DB. Error: {e}", flush=True)
         
         print(f"INFO: Tempat '{deleted_place_name}' (ID: {place_id}) berhasil dihapus dari database.", flush=True)
-        return Response(json_body={"message": f"Tempat '{deleted_place_name}' berhasil dihapus."}, status=200) # atau 204
+        return Response(json_body={"message": f"Tempat '{deleted_place_name}' berhasil dihapus."}, status=200)
     
-    except InvalidRequestError as e: 
-        if transaction.isDoomed(): transaction.abort() 
+    except InvalidRequestError as e:
+        if transaction.isDoomed(): transaction.abort()
         print(f"ERROR di delete_place (InvalidRequestError): {e}.", flush=True)
         raise HTTPNotFound(detail=f"Tempat dengan ID {place_id} tidak dapat diproses atau sudah dihapus.")
-    except DBAPIError as e: 
+    except DBAPIError as e:
         if transaction.isDoomed(): transaction.abort()
         print(f"ERROR di delete_place (DBAPIError): {e}", flush=True)
         traceback.print_exc()
         raise HTTPInternalServerError(detail="Terjadi kesalahan pada database saat mencoba menghapus tempat.")
-    except Exception as e: 
+    except Exception as e:
         if transaction.isDoomed(): transaction.abort()
         print(f"ERROR di delete_place (Exception): {e}", flush=True)
         traceback.print_exc()
         detail_error = getattr(e, 'detail', "Terjadi kesalahan internal server saat menghapus tempat.")
-        if isinstance(e, (HTTPInternalServerError, HTTPForbidden, HTTPNotFound, HTTPBadRequest)): # Periksa jika e sudah merupakan HTTP Exception
+        if isinstance(e, (HTTPInternalServerError, HTTPForbidden, HTTPNotFound, HTTPBadRequest)):
             raise e
         raise HTTPInternalServerError(detail=detail_error)

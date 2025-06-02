@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
@@ -18,13 +17,13 @@ function App() {
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
-      <main className="flex-1"> 
+      <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           {user && <Route path="/admin" element={<Admin />} />}
           <Route path="/place/:id" element={<PlaceDetail />} />
-          <Route path="/about" element={<About />} /> 
+          <Route path="/about" element={<About />} />
           <Route path="/gallery" element={<Gallery />} />
         </Routes>
       </main>

@@ -18,7 +18,7 @@ function Admin() {
   const [error, setError] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const [currentImageUrl, setCurrentImageUrl] = useState('');
-  
+
   const fileInputRef = useRef(null);
 
   const API_URL = 'http://localhost:6543/api/places';
@@ -84,7 +84,6 @@ function Admin() {
       return;
     }
 
-    // Untuk tempat baru (bukan mode edit), gambar wajib diisi
     if (!isEditing && !imageFile) {
       alert('Silakan pilih gambar untuk tempat baru.');
       return;
@@ -106,8 +105,6 @@ function Admin() {
     if (imageFile) {
       formData.append('imageFile', imageFile);
     }
-    // Jika sedang mengedit dan tidak ada file gambar baru,
-    // backend tidak akan mengubah gambar yang sudah ada. Tidak perlu mengirim field image lama.
 
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing ? `${API_URL}/${form.id}` : API_URL;
@@ -123,38 +120,33 @@ function Admin() {
         body: formData,
       });
 
-      // Cek apakah respons OK (status 200-299)
-      if (response.ok) { // response.ok mencakup status 200, 201, dll.
-        const result = await response.json(); // Asumsikan sukses selalu mengembalikan JSON
+      if (response.ok) {
+        const result = await response.json();
         alert(isEditing ? 'Tempat berhasil diperbarui!' : `Tempat "${result.name}" berhasil ditambahkan!`);
-        fetchPlaces(); // Muat ulang daftar tempat
-        resetForm();   // Reset form
+        fetchPlaces();
+        resetForm();
       } else {
-        // Jika respons tidak OK, baca body sebagai teks dulu (sekali saja)
         let errorDetailMessage = `Gagal menyimpan data. Status: ${response.status} ${response.statusText}`;
-        const responseText = await response.text(); // Baca body sebagai teks
+        const responseText = await response.text();
 
         if (responseText) {
           try {
-            // Coba parse teks tersebut sebagai JSON
             const errorData = JSON.parse(responseText);
             if (errorData && (errorData.detail || errorData.message)) {
               errorDetailMessage = errorData.detail || errorData.message;
             } else if (typeof errorData === 'string' && errorData.length > 0) {
-              errorDetailMessage = errorData; // Jika errorData adalah string non-kosong
-            } else if (responseText) { // Fallback ke responseText jika parsing JSON tidak menghasilkan pesan yang berguna
-              errorDetailMessage = responseText.substring(0, 200); // Batasi panjang untuk error HTML
+              errorDetailMessage = errorData;
+            } else if (responseText) {
+              errorDetailMessage = responseText.substring(0, 200);
             }
           } catch (e_parse) {
-            // Jika gagal parse sebagai JSON, gunakan teks respons (mungkin HTML error dari server)
             console.warn("Response error body is not valid JSON:", responseText);
-            errorDetailMessage = responseText.substring(0, 200); // Batasi panjangnya
+            errorDetailMessage = responseText.substring(0, 200);
           }
         }
         throw new Error(errorDetailMessage);
       }
     } catch (err) {
-      // err.message di sini akan berisi pesan error yang sudah diproses atau error jaringan
       setSubmitError(err.message);
       alert(`Terjadi Kesalahan: ${err.message}`);
       console.error('Submit error details:', err);
@@ -168,10 +160,10 @@ function Admin() {
         alert('Sesi admin tidak ditemukan. Silakan login kembali.');
         return;
       }
-      
-      console.log('Deleting place with id:', id); // Tetap untuk debugging
+
+      console.log('Deleting place with id:', id);
       const deleteUrl = `${API_URL}/${id}`;
-      console.log('DELETE URL:', deleteUrl); // Tetap untuk debugging
+      console.log('DELETE URL:', deleteUrl);
 
       try {
         const response = await fetch(deleteUrl, {
@@ -181,44 +173,40 @@ function Admin() {
           },
         });
 
-        if (response.status === 200) { // Jika backend mengembalikan data setelah berhasil (misal: pesan sukses)
-          const result = await response.json(); // Coba parse JSON jika ada body
+        if (response.status === 200) {
+          const result = await response.json();
           alert(result.message || 'Tempat berhasil dihapus!');
           fetchPlaces();
           if (isEditing && form.id === id) {
             resetForm();
           }
-        } else if (response.status === 204) { // No Content, sukses tanpa body
+        } else if (response.status === 204) {
           alert('Tempat berhasil dihapus!');
           fetchPlaces();
           if (isEditing && form.id === id) {
             resetForm();
           }
         } else if (response.status === 404) {
-          // Pesan khusus untuk 404 Not Found
           alert('Tempat tidak ditemukan di database atau mungkin sudah dihapus sebelumnya.');
-          fetchPlaces(); // Segarkan daftar untuk konsistensi
+          fetchPlaces();
           if (isEditing && form.id === id) {
-            resetForm(); // Reset form jika item yang diedit ternyata tidak ada
+            resetForm();
           }
         } else {
-          // Untuk error lainnya
           let errorDetail = `Gagal menghapus tempat. Status: ${response.status}`;
           try {
-            // Coba baca detail error dari body respons
             const errorData = await response.json();
             if (errorData && (errorData.detail || errorData.message)) {
               errorDetail = errorData.detail || errorData.message;
             }
           } catch (e) {
-            // Jika body bukan JSON atau tidak ada detail, gunakan pesan status saja
             console.warn("Respons error penghapusan bukan JSON atau tidak memiliki field 'detail'. Status:", response.status);
           }
           throw new Error(errorDetail);
         }
       } catch (err) {
         alert(`Error: ${err.message}`);
-        console.error('Delete error details:', err); // Lebih detail untuk debugging
+        console.error('Delete error details:', err);
       }
     }
   };

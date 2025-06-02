@@ -1,5 +1,3 @@
-# C:\PEMWEB\tubes\backend\wisata_api\wisata_api\models\__init__.py
-
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -10,14 +8,11 @@ import logging
 
 log = logging.getLogger(__name__)
 
-# Setup untuk session DB
 DBSession = scoped_session(sessionmaker())
 register(DBSession)
 
-# Base untuk semua model
 Base = declarative_base()
 
-# Setup hashing password
 pwd_context = CryptContext(schemes=["pbkdf2_sha512"], deprecated="auto")
 
 
@@ -81,7 +76,6 @@ def initialize_sql(engine):
             admin_user.set_password('admin')  # default password admin
             session.add(admin_user)
             with transaction.manager:
-                # Commit otomatis
                 pass
             print("Admin user 'admin' created with password 'admin'")
         else:
