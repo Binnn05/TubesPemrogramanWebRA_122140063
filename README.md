@@ -40,8 +40,7 @@ kemudian menjalankan `npm run dev` website otomatis akan berjalan di localhost:5
 * `transaction`, `pyramid_tm`, `zope.sqlalchemy`: Untuk manajemen transaksi.
 * `passlib`: Untuk hashing password.
 
-Untuk menjalankan backend, pastikan Anda memiliki Python dan pip terinstal. Instal dependensi dengan menjalankan `pip install -e .` (atau `pip install -r requirements.txt` jika ada) di direktori `backend/wisata_api`. Anda juga memerlukan server database PostgreSQL yang berjalan dan dikonfigurasi sesuai `development.ini`. 
-setelah menginstall dependensi jalankan `pserve development.ini --reload` untuk memulai backend yang otomatis terbuka di halaman localhost:6543
+Untuk menjalankan backend, pastikan Anda memiliki Python dan pip terinstal. Instal dependensi dengan menjalankan `pip install -e .` (atau `pip install -r requirements.txt` jika ada) di direktori `backend/wisata_api`. Anda juga memerlukan server database PostgreSQL yang berjalan dan dikonfigurasi sesuai `development.ini`. setelah menginstall dependensi, buat virtual environment nya dengan menjalankan `.\venv\Scripts\activate`, setelah aktif jalankan `pserve development.ini --reload` untuk memulai backend yang otomatis terbuka di halaman localhost:6543
 
 ## Fitur pada Aplikasi
 
