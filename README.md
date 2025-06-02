@@ -46,7 +46,7 @@ Untuk menjalankan backend, pastikan Anda memiliki Python dan pip terinstal. Inst
 
 * **Beranda Informatif**: Menampilkan carousel tempat wisata unggulan dan deskripsi singkat mengenai Sungailiat.
 * **Daftar Tempat Wisata**: Menampilkan daftar semua tempat wisata yang tersedia dengan gambar mini dan informasi dasar.
-* **Detail Tempat Wisata**: Halaman individual untuk setiap tempat wisata yang menampilkan nama, deskripsi lengkap, kategori, lokasi, gambar, dan peta Google Maps (jika tersedia).
+* **Detail Tempat Wisata**: Halaman individual untuk setiap tempat wisata yang menampilkan nama, deskripsi lengkap, kategori, lokasi, gambar, dan peta Google Maps.
 * **Pencarian dan Filter**: Pengguna dapat mencari tempat berdasarkan nama atau deskripsi, dan memfilter berdasarkan kategori (misalnya: Wisata Pantai, Kuliner, Tempat Ibadah, dll.).
 * **Galeri Foto**: Halaman khusus untuk menampilkan koleksi gambar-gambar dari berbagai destinasi wisata di Sungailiat, dengan fitur "like".
 * **Halaman Tentang Kami**: Informasi mengenai misi dan tim pengembang aplikasi.
@@ -54,7 +54,6 @@ Untuk menjalankan backend, pastikan Anda memiliki Python dan pip terinstal. Inst
     * Login untuk admin.
     * Kemampuan untuk Membuat (Create), Membaca (Read), Memperbarui (Update), dan Menghapus (Delete) data tempat wisata.
     * Formulir untuk menambah dan mengedit detail tempat, termasuk nama, deskripsi, kategori, lokasi, gambar, dan URL embed Google Maps.
-* **Desain Responsif**: Tampilan website dapat menyesuaikan diri dengan baik pada berbagai ukuran layar (desktop, tablet, mobile).
 
 ## Referensi
 
